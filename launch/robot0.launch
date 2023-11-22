@@ -1,0 +1,10 @@
+<launch>
+  <param name="robot_no" type="str" value="tb3_0" />
+
+  <node pkg="navi_gazebo" type="globalplanner.py" name="globalplanner_robot0" output="screen">
+  </node>
+
+  <node pkg="navi_gazebo" type="purepursuit.py" name="purepursuit_robot0" output="screen">
+  </node>
+
+</launch>
