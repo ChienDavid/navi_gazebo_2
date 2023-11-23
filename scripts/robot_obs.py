@@ -13,13 +13,13 @@ import rospy
 from nav_msgs.msg import Odometry
 
 from gridmap import OccupancyGridMap
-from utils import testmapAct2Sim, angle_quaternion2euler
+from utils import RESOLUTION, testmapAct2Sim, angle_quaternion2euler
 from navi_gazebo.msg import Robotmsgs
 
 
 
 class RobotObstacles:
-    def __init__(self, amap: OccupancyGridMap, velocity, resolution=1, show_animation=False):
+    def __init__(self, amap: OccupancyGridMap, velocity, resolution=RESOLUTION, show_animation=False):
         # setup a map
         self.amap = amap
         self.velocity = velocity
@@ -76,6 +76,7 @@ class RobotObstacles:
     def predict_motion(self, robot, velocity, robot_act):
         robot_new = np.empty((0, 2), dtype=int)
         vel_range = np.arange(2, velocity, 2)
+        vel_range = [math.ceil(val/RESOLUTION) for val in vel_range]
         for pos in robot:
             # new_pos = self.motion(pos[0], pos[1], robot_act[2], vel)
             for vel in vel_range:
@@ -107,13 +108,13 @@ class RobotObstacles:
         while not rospy.is_shutdown():
             ### get obstacles around robots
             # robot lethal (inflation 1)
-            robot0_lethal = self.amap.inflation_obstacles(self.robot1_sim, [self.robot0_sim[0]], [self.robot0_sim[1]], distance=[1, 3])
-            robot1_lethal = self.amap.inflation_obstacles(self.robot0_sim, [self.robot1_sim[0]], [self.robot1_sim[1]], distance=[1, 3])
+            robot0_lethal = self.amap.inflation_obstacles(self.robot1_sim, [self.robot0_sim[0]], [self.robot0_sim[1]], distance=[1, math.ceil(3/RESOLUTION)])
+            robot1_lethal = self.amap.inflation_obstacles(self.robot0_sim, [self.robot1_sim[0]], [self.robot1_sim[1]], distance=[1, math.ceil(3/RESOLUTION)])
             robot0_inflation_1 = np.array(robot0_lethal)
             robot1_inflation_1 = np.array(robot1_lethal)
             # robot inflation (inflation 2)
-            robot0_inflation_2 = self.amap.inflation_obstacles(self.robot1_sim, robot0_inflation_1[:,0], robot0_inflation_1[:,1], distance=[2, 8])
-            robot1_inflation_2 = self.amap.inflation_obstacles(self.robot0_sim, robot1_inflation_1[:,0], robot1_inflation_1[:,1], distance=[2, 8])
+            robot0_inflation_2 = self.amap.inflation_obstacles(self.robot1_sim, robot0_inflation_1[:,0], robot0_inflation_1[:,1], distance=[math.ceil(2/RESOLUTION), math.ceil(8/RESOLUTION)])
+            robot1_inflation_2 = self.amap.inflation_obstacles(self.robot0_sim, robot1_inflation_1[:,0], robot1_inflation_1[:,1], distance=[math.ceil(2/RESOLUTION), math.ceil(8/RESOLUTION)])
 
             ### predict obstacles coming from each robot
             robot0_new = self.predict_motion(robot0_inflation_2, self.velocity, self.robot0_act)
@@ -149,9 +150,8 @@ class RobotObstacles:
 
 def main():
     rospy.init_node("robot_obs")
-    resolution = 1.0
     velocity = 4.0
-    amap = OccupancyGridMap(resolution=resolution)
+    amap = OccupancyGridMap(resolution=RESOLUTION)
     robot_obs = RobotObstacles(amap, velocity, show_animation=True)
     robot_obs.execute()
 

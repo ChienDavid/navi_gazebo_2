@@ -73,9 +73,16 @@ class SLAM:
                 if not slam_map.is_unoccupied(node): # if the node changes from occupied to unoccupied
                     slam_map.remove_obstacle(node)
         return local_obs, slam_map
+    
+    def generate_another_obs(self, path):
+        pass
         
-    def rescan(self, pos_sim: (int, int), view_range: int, lidar_msg, pos_act, robot_inf1, robot_inf2, new_mission=False):
+    def rescan(self, pos_sim: (int, int), view_range: int, lidar_msg, pos_act, robot_inf1, robot_inf2, new_mission=False, another=None):
         """Rescan local grid map around the global position of the robot"""
+        # check another path (robot1 path)
+        if another != None:
+            self.generate_another_obs(another)
+
         # reset slam map
         slam_map = deepcopy(self.original_map) #if new_mission else self.pre_slam_map
         
@@ -97,8 +104,8 @@ class SLAM:
             slam_map.inflation_2.extend(localObs_inflation_2)
         
         # predict obstacles 
-        slam_map.inflation_1.extend(robot_inf1)
-        slam_map.inflation_2.extend(robot_inf2)
+        slam_map.inflation_1.extend(robot_inf2)
+        slam_map.inflation_2.extend(robot_inf1)
 
         #self.pre_slam_map = slam_map
         ### debug: plot slam map

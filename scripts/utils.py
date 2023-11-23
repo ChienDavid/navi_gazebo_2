@@ -12,6 +12,7 @@ from typing import List
 
 OBSTACLE = 255
 UNOCCUPIED = 0
+RESOLUTION = 1.5
 
 
 

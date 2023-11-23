@@ -17,12 +17,12 @@ from slam import SLAM
 from astar import Astar
 from navi_gazebo.msg import Pathmsgs, Robotmsgs
 from gridmap import OccupancyGridMap
-from utils import OBSTACLE, testmapAct2Sim, convert_path_Sim2Act, angle_quaternion2euler
+from utils import OBSTACLE, RESOLUTION, testmapAct2Sim, convert_path_Sim2Act, angle_quaternion2euler
 
 
 
 class GlobalPlanner:
-    def __init__(self, robot, amap, method, resolution=1):
+    def __init__(self, robot, amap, method, resolution=RESOLUTION):
         # setup a map
         self.amap = amap
         self.method = method
@@ -30,8 +30,10 @@ class GlobalPlanner:
 
         # setup robot numbers, topics
         self.robot_no = robot
+        self.another_robot = 'tb3_1' if robot == 'tb3_0' else 'tb3_0'
         self.robot_topic = '/' + str(self.robot_no) + '/'
-        self.setup_topics(self.robot_topic)
+        self.another_robot_topic = '/' + str(self.another_robot) + '/'
+        self.setup_topics(self.robot_topic, self.another_robot)
 
         # initialize robot, map
         self.last_robot = self.robot_sim
@@ -40,11 +42,12 @@ class GlobalPlanner:
 
         rospy.loginfo("Initializing {} method".format(self.method))
         self.global_planner = Astar(amap=amap, method=self.method, resolution=self.resolution)
-
         rospy.loginfo("{} plans from {} to {}".format(self.method, [round(val,3) for val in self.last_robot], [round(val,3) for val in self.last_goal]))
         self.path, t0, length = self.global_planner.plan(robot_pos=self.last_robot, goal_pos=self.last_goal, newmap=amap)
 
-    def setup_topics(self, topic):
+        self.another_xy = None
+
+    def setup_topics(self, topic, another_topic):
         self.pub_path = rospy.Publisher(topic+"globalpath", Pathmsgs, queue_size=10)
         self.pub_pathrviz = rospy.Publisher(topic+"globalpath_rviz", Path, queue_size=10)
 
@@ -54,6 +57,9 @@ class GlobalPlanner:
         self.check_connection(topic+"scan", LaserScan)
         self.check_connection(topic+"robotobs", Robotmsgs)
         self.check_connection(topic+"move_base_simple/goal", PoseStamped)
+
+        if self.robot_no == 'tb3_0':
+            rospy.Subscriber(another_topic+"globalpath", Pathmsgs, self.callback_anotherpath)
 
     def check_connection(self, topic, msg_type):
         data = None
@@ -94,6 +100,11 @@ class GlobalPlanner:
         self.robot_inf2 = np.vstack((robot_inf2_x, robot_inf2_y)).T
         self.robot_inf1 = self.robot_inf1.tolist()
         self.robot_inf2 = self.robot_inf2.tolist()
+
+    def callback_anotherpath(self, msg):
+        another_x = msg.globalCoordXs
+        another_y = msg.globalCoordYs
+        self.another_xy = np.vstack((another_x, another_y)).T
 
     ###################################################################################################
     def check_goal(self, robot, goal, goal_radius=3):
@@ -140,7 +151,7 @@ class GlobalPlanner:
                 self.last_robot, self.last_goal = self.robot_sim, self.goal_sim
                 rospy.loginfo("{} plans from {} to {}".format(self.method, [round(val,3) for val in self.last_robot], [round(val,3) for val in self.last_goal]))
                 # replan
-                slam_map = self.aSlam.rescan(self.robot_sim, self.view_range, self.lidar_msg, self.robot_act, self.robot_inf1, self.robot_inf2, new_mission)
+                slam_map = self.aSlam.rescan(self.robot_sim, self.view_range, self.lidar_msg, self.robot_act, self.robot_inf1, self.robot_inf2, new_mission, another=self.another_xy)
                 self.path, _, _ = self.global_planner.plan(robot_pos=self.last_robot, goal_pos=self.last_goal, newmap=slam_map)
             if len(self.path) < 2:
                 self.path = self.pre_path
@@ -171,9 +182,8 @@ def main():
     
     # Initialize
     rospy.loginfo("Initializing...")
-    resolution = 1.0
-    amap = OccupancyGridMap(resolution=resolution)
-    global_planner = GlobalPlanner(robot, amap, PLANNERS[PLANNER_ID], resolution=resolution)
+    amap = OccupancyGridMap(resolution=RESOLUTION)
+    global_planner = GlobalPlanner(robot, amap, PLANNERS[PLANNER_ID])
 
     # Execute global path planner
     rospy.loginfo("Start executing...")
