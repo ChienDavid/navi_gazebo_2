@@ -80,8 +80,7 @@ class PurePursuit:
     def callback_path(self, msg):
         traj_x = msg.globalCoordXs
         traj_y = msg.globalCoordYs
-        self.traj = np.dstack((traj_x, traj_y))
-        self.traj = np.squeeze(self.traj)
+        self.traj = np.vstack((traj_x, traj_y)).T
         self.last_idx =len(self.traj) - 1
         self.goal = [traj_x[self.last_idx], traj_y[self.last_idx]]
         self.start = [traj_x[0], traj_y[0]]
@@ -90,8 +89,9 @@ class PurePursuit:
         msg = rospy.wait_for_message(topic, msg_type, timeout=10)
         traj_x = msg.globalCoordXs
         traj_y = msg.globalCoordYs
-        self.traj = np.dstack((traj_x, traj_y))
-        self.traj = np.squeeze(self.traj)
+        self.traj = np.vstack((traj_x, traj_y)).T
+        # self.traj = np.dstack((traj_x, traj_y))
+        # self.traj = np.squeeze(self.traj)
         self.last_idx =len(self.traj) - 1
         self.goal = [traj_x[self.last_idx], traj_y[self.last_idx]]
 
@@ -248,7 +248,7 @@ def main():
     rospy.loginfo("Initializing...")
     g = 0.2               # look forward gain
     d = 0.3               # [m] lookahead distance
-    target_speed = 0.10   # [m/s] speed of robot
+    target_speed = 0.20   # [m/s] speed of robot
     angle_range = math.pi/4
     pp_controller = PurePursuit(robot, g, d, target_speed, angle_range=angle_range)
 

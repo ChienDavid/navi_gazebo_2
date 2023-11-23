@@ -89,7 +89,7 @@ class OccupancyGridMap:
         #results = np.array(results)
         return results
 
-    def inflation_obstacles(self, pos, obsx, obsy, distance=[0, 1]):
+    def inflation_obstacles(self, obsx, obsy, distance=[0, 1]):
         nodes = set()
         for val in zip(obsx, obsy):
             for r in range(distance[0], distance[1]):

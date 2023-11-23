@@ -7,6 +7,7 @@ Description: main function running global path planners for Indoor navigation
 """
 import math
 import numpy as np
+import matplotlib.pyplot as plt
 
 import rospy
 from nav_msgs.msg import Path
@@ -33,7 +34,7 @@ class GlobalPlanner:
         self.another_robot = 'tb3_1' if robot == 'tb3_0' else 'tb3_0'
         self.robot_topic = '/' + str(self.robot_no) + '/'
         self.another_robot_topic = '/' + str(self.another_robot) + '/'
-        self.setup_topics(self.robot_topic, self.another_robot)
+        self.setup_topics(self.robot_topic, self.another_robot_topic)
 
         # initialize robot, map
         self.last_robot = self.robot_sim
@@ -44,8 +45,6 @@ class GlobalPlanner:
         self.global_planner = Astar(amap=amap, method=self.method, resolution=self.resolution)
         rospy.loginfo("{} plans from {} to {}".format(self.method, [round(val,3) for val in self.last_robot], [round(val,3) for val in self.last_goal]))
         self.path, t0, length = self.global_planner.plan(robot_pos=self.last_robot, goal_pos=self.last_goal, newmap=amap)
-
-        self.another_xy = None
 
     def setup_topics(self, topic, another_topic):
         self.pub_path = rospy.Publisher(topic+"globalpath", Pathmsgs, queue_size=10)
@@ -60,6 +59,7 @@ class GlobalPlanner:
 
         if self.robot_no == 'tb3_0':
             rospy.Subscriber(another_topic+"globalpath", Pathmsgs, self.callback_anotherpath)
+            self.check_connection(another_topic+"globalpath", Pathmsgs)
 
     def check_connection(self, topic, msg_type):
         data = None
@@ -102,11 +102,25 @@ class GlobalPlanner:
         self.robot_inf2 = self.robot_inf2.tolist()
 
     def callback_anotherpath(self, msg):
-        another_x = msg.globalCoordXs
-        another_y = msg.globalCoordYs
-        self.another_xy = np.vstack((another_x, another_y)).T
+        self.another_x = []
+        self.another_y = []
+        x_act = msg.globalCoordXs
+        y_act = msg.globalCoordYs
+        for (xi, yi) in zip (x_act, y_act):
+            x, y = testmapAct2Sim(xi, yi, resolution=self.resolution)
+            self.another_x.append(x)
+            self.another_y.append(y)
+        #self.another_xy = np.vstack((self.another_x, self.another_y)).T
 
     ###################################################################################################
+    def update_another_path(self, slam_map, another_x, another_y, range=12):
+        robot_footprint = slam_map.inflation_obstacles(another_x[:range], another_y[:range], distance=[1, math.ceil(3/RESOLUTION)])
+        slam_map.inflation_1.extend(robot_footprint)
+        robot_footprint = np.array(robot_footprint)
+        robot_inflation = slam_map.inflation_obstacles(robot_footprint[:,0], robot_footprint[:,1], distance=[3, math.ceil(6/RESOLUTION)])
+        slam_map.inflation_2.extend(robot_inflation)
+        return slam_map
+
     def check_goal(self, robot, goal, goal_radius=3):
         x1, y1 = robot[0], robot[1]
         x2, y2 = goal[0], goal[1]
@@ -151,18 +165,15 @@ class GlobalPlanner:
                 self.last_robot, self.last_goal = self.robot_sim, self.goal_sim
                 rospy.loginfo("{} plans from {} to {}".format(self.method, [round(val,3) for val in self.last_robot], [round(val,3) for val in self.last_goal]))
                 # replan
-                slam_map = self.aSlam.rescan(self.robot_sim, self.view_range, self.lidar_msg, self.robot_act, self.robot_inf1, self.robot_inf2, new_mission, another=self.another_xy)
+                slam_map = self.aSlam.rescan(self.robot_sim, self.view_range, self.lidar_msg, self.robot_act, self.robot_inf1, self.robot_inf2, new_mission)
+                if self.robot_no == 'tb3_0':
+                    slam_map = self.update_another_path(slam_map, self.another_x, self.another_y)
                 self.path, _, _ = self.global_planner.plan(robot_pos=self.last_robot, goal_pos=self.last_goal, newmap=slam_map)
             if len(self.path) < 2:
                 self.path = self.pre_path
             else:
                 self.pre_path = self.path
                 
-            # check goal
-            if self.check_goal(self.robot_sim, self.goal_sim):
-                rospy.loginfo("Robot has arrived the goal!")
-                continue
-
             # publish planned route
             path_tracking, path_rviz = self.arrange_path(self.path, resolution=self.resolution)
             self.pub_path.publish(path_tracking)

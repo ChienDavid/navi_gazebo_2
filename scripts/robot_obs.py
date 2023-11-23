@@ -108,13 +108,13 @@ class RobotObstacles:
         while not rospy.is_shutdown():
             ### get obstacles around robots
             # robot lethal (inflation 1)
-            robot0_lethal = self.amap.inflation_obstacles(self.robot1_sim, [self.robot0_sim[0]], [self.robot0_sim[1]], distance=[1, math.ceil(3/RESOLUTION)])
-            robot1_lethal = self.amap.inflation_obstacles(self.robot0_sim, [self.robot1_sim[0]], [self.robot1_sim[1]], distance=[1, math.ceil(3/RESOLUTION)])
+            robot0_lethal = self.amap.inflation_obstacles([self.robot0_sim[0]], [self.robot0_sim[1]], distance=[1, math.ceil(3/RESOLUTION)])
+            robot1_lethal = self.amap.inflation_obstacles([self.robot1_sim[0]], [self.robot1_sim[1]], distance=[1, math.ceil(3/RESOLUTION)])
             robot0_inflation_1 = np.array(robot0_lethal)
             robot1_inflation_1 = np.array(robot1_lethal)
             # robot inflation (inflation 2)
-            robot0_inflation_2 = self.amap.inflation_obstacles(self.robot1_sim, robot0_inflation_1[:,0], robot0_inflation_1[:,1], distance=[math.ceil(2/RESOLUTION), math.ceil(8/RESOLUTION)])
-            robot1_inflation_2 = self.amap.inflation_obstacles(self.robot0_sim, robot1_inflation_1[:,0], robot1_inflation_1[:,1], distance=[math.ceil(2/RESOLUTION), math.ceil(8/RESOLUTION)])
+            robot0_inflation_2 = self.amap.inflation_obstacles(robot0_inflation_1[:,0], robot0_inflation_1[:,1], distance=[math.ceil(2/RESOLUTION), math.ceil(8/RESOLUTION)])
+            robot1_inflation_2 = self.amap.inflation_obstacles(robot1_inflation_1[:,0], robot1_inflation_1[:,1], distance=[math.ceil(2/RESOLUTION), math.ceil(8/RESOLUTION)])
 
             ### predict obstacles coming from each robot
             robot0_new = self.predict_motion(robot0_inflation_2, self.velocity, self.robot0_act)

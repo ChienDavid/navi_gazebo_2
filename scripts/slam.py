@@ -6,18 +6,19 @@ Created on Mon Apr  4 15:50:36 2022
 Description: SLAM
 """
 
+import math
 from copy import deepcopy
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import Dict
 
 from gridmap import OccupancyGridMap
-from utils import OBSTACLE, heuristic, testmapAct2Sim
+from utils import OBSTACLE, RESOLUTION, heuristic, testmapAct2Sim
 
 
 
 class SLAM:
-    def __init__(self, amap: OccupancyGridMap, resolution=1):
+    def __init__(self, amap: OccupancyGridMap, resolution=RESOLUTION):
         self.truth_map = amap
         self.resolution = resolution
         self.original_map = deepcopy(amap)
@@ -74,15 +75,8 @@ class SLAM:
                     slam_map.remove_obstacle(node)
         return local_obs, slam_map
     
-    def generate_another_obs(self, path):
-        pass
-        
-    def rescan(self, pos_sim: (int, int), view_range: int, lidar_msg, pos_act, robot_inf1, robot_inf2, new_mission=False, another=None):
+    def rescan(self, pos_sim: (int, int), view_range: int, lidar_msg, pos_act, robot_inf1, robot_inf2, new_mission=False):
         """Rescan local grid map around the global position of the robot"""
-        # check another path (robot1 path)
-        if another != None:
-            self.generate_another_obs(another)
-
         # reset slam map
         slam_map = deepcopy(self.original_map) #if new_mission else self.pre_slam_map
         
@@ -95,12 +89,12 @@ class SLAM:
         local_obs, slam_map = self.update_map(local_observation, slam_map)
         
         # determine inflation, add inflation to slam map
-        localObs_inflation_1 = self.truth_map.inflation_obstacles(pos_sim, local_obs[:,0], local_obs[:,1], distance=[1, 3])
+        localObs_inflation_1 = self.truth_map.inflation_obstacles(local_obs[:,0], local_obs[:,1], distance=[1, math.ceil(3/RESOLUTION)])
         slam_map.inflation_1.extend(localObs_inflation_1)
 
         if len(localObs_inflation_1) > 0:
             localObs_inflation_1_array = np.array(localObs_inflation_1)
-            localObs_inflation_2 = self.truth_map.inflation_obstacles(pos_sim, localObs_inflation_1_array[:,0], localObs_inflation_1_array[:,1], distance=[3, 6])
+            localObs_inflation_2 = self.truth_map.inflation_obstacles(localObs_inflation_1_array[:,0], localObs_inflation_1_array[:,1], distance=[math.ceil(2/RESOLUTION), math.ceil(3/RESOLUTION)])
             slam_map.inflation_2.extend(localObs_inflation_2)
         
         # predict obstacles 
