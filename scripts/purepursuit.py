@@ -248,7 +248,7 @@ def main():
     rospy.loginfo("Initializing...")
     g = 0.2               # look forward gain
     d = 0.3               # [m] lookahead distance
-    target_speed = 0.20   # [m/s] speed of robot
+    target_speed = 0.25   # [m/s] speed of robot
     angle_range = math.pi/4
     pp_controller = PurePursuit(robot, g, d, target_speed, angle_range=angle_range)
 

@@ -7,7 +7,6 @@ Description: main function running global path planners for Indoor navigation
 """
 import math
 import numpy as np
-import matplotlib.pyplot as plt
 
 import rospy
 from nav_msgs.msg import Path
@@ -113,7 +112,7 @@ class GlobalPlanner:
         #self.another_xy = np.vstack((self.another_x, self.another_y)).T
 
     ###################################################################################################
-    def update_another_path(self, slam_map, another_x, another_y, range=12):
+    def update_another_path(self, slam_map, another_x, another_y, range=10):
         robot_footprint = slam_map.inflation_obstacles(another_x[:range], another_y[:range], distance=[1, math.ceil(3/RESOLUTION)])
         slam_map.inflation_1.extend(robot_footprint)
         robot_footprint = np.array(robot_footprint)
