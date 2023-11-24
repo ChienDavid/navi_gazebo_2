@@ -29,7 +29,7 @@ Task: two robots autonomously navigate to different target locations without col
 Solution:
 - Global path planner: A* algorithm
 - Path tracking controller: Pure pursuit
-- Motion prediction
+- Decentralized control: predict motion of its neighbor, share global paths
 
 
 
@@ -41,7 +41,8 @@ Experimental environment:
 
 
 Video:
-https://youtu.be/VZaxRao7CzQ
+Version 1: https://youtu.be/VZaxRao7CzQ
+Version 2: https://youtu.be/x-1wSUvgsD4
 
 
 
